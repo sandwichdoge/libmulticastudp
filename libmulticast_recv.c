@@ -114,7 +114,7 @@ static void* create_recv_thread(void* args) {
     return NULL;
 }
 
-struct mcreceiver* receiver_init(char *interface, char* multicastip, unsigned short port, void (*callback)(char*, int)) {
+struct mcreceiver* mc_receiver_init(char *interface, char* multicastip, unsigned short port, void (*callback)(char*, int)) {
     struct mcreceiver* rc = malloc(sizeof(*rc));
     rc->sd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0);
     if (rc->sd < 0) {
@@ -185,7 +185,7 @@ error:
     return NULL;
 }
 
-void receiver_uinit(struct mcreceiver* rc) {
+void mc_receiver_uinit(struct mcreceiver* rc) {
     set_running(rc, 0);
     cancel_select(rc);
 }

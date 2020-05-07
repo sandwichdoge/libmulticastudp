@@ -9,7 +9,7 @@ import sys
 import time
 
 message = 'data worth repeating'
-multicast_group = ('227.1.1.1', 4321)
+multicast_group = ('226.1.1.1', 4321)
 
 # Create the datagram socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

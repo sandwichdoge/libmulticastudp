@@ -11,7 +11,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-struct mcsender* sender_init(char *interface, char* multicastip, unsigned short port) {
+struct mcsender* mc_sender_init(char *interface, char* multicastip, unsigned short port) {
     struct mcsender *sc = malloc(sizeof(*sc));
     sc->sd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sc->sd < 0) {
@@ -58,12 +58,12 @@ error:
     return NULL;
 }
 
-void sender_uinit(struct mcsender* sc) {
+void mc_sender_uinit(struct mcsender* sc) {
     close(sc->sd);
     free(sc);
 }
 
-int sender_send(struct mcsender* sc, const char* data, size_t len) {
+int mc_sender_send(struct mcsender* sc, const char* data, size_t len) {
     // Make a copy of data to send. Because socket's speed is slow, data's lifetime may run out on caller.
     char *buf = calloc(len, 1);
     memcpy(buf, data, len);

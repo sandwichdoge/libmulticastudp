@@ -28,11 +28,11 @@ void cb(char *data, int len) {
 }
 
 int main() {
-    struct mcreceiver *rc = receiver_init(NULL, "226.1.1.1", 4321, &cb);
+    struct mcreceiver *rc = mc_receiver_init(NULL, "226.1.1.1", 4321, &cb);
     while (running) {
         sleep(1);
     }
-    receiver_uinit(rc);
+    mc_receiver_uinit(rc);
     return 0;
 }
 ```
@@ -40,8 +40,9 @@ int main() {
 Send multicast packets:
 ```
 int main() {
-    struct mcsender *sc = sender_init(NULL, "226.1.1.1", 4321);
-    sender_send(sc, "Hello\0", strlen("Hello") + 1);
+    struct mcsender *sc = mc_sender_init(NULL, "226.1.1.1", 4321);
+    mc_sender_send(sc, "Hello\0", strlen("Hello") + 1);
+    mc_sender_uinit(sc);
     return 0;
 }
 ```

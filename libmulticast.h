@@ -26,17 +26,17 @@ struct mcreceiver {
 // Init receiver server, bind a callback function to an interface and multicast ip group.
 // interface is the name of local interface (e.g. eth0), NULL to bind all interfaces.
 // multicastip is something like "226.1.1.1".
-struct mcreceiver* receiver_init(char *interface, char* multicastip, unsigned short port, void (*callback)(char*, int));
+struct mcreceiver* mc_receiver_init(char *interface, char* multicastip, unsigned short port, void (*callback)(char*, int));
 // Uninit receiver server.
-void receiver_uinit(struct mcreceiver*);
+void mc_receiver_uinit(struct mcreceiver*);
 
 // Init sender server with a multicast ip group.
 // interface is the name of local interface (e.g. eth0), NULL to auto select interface.
-struct mcsender* sender_init(char *interface, char* multicastip, unsigned short port);
+struct mcsender* mc_sender_init(char *interface, char* multicastip, unsigned short port);
 // Uninit sender server.
-void sender_uinit(struct mcsender* sc);
+void mc_sender_uinit(struct mcsender* sc);
 // Broadcast message to registered group.
-int sender_send(struct mcsender* sc, const char* data, size_t len);
+int mc_sender_send(struct mcsender* sc, const char* data, size_t len);
 
 #ifdef __cplusplus
 }
