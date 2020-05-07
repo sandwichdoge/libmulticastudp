@@ -46,3 +46,13 @@ int main() {
     return 0;
 }
 ```
+
+#### Linking
+```
+#include "libmulticast.h"
+```
+
+Require pthread.
+```
+$(CC) main.c -lmulticast -pthread
+```
