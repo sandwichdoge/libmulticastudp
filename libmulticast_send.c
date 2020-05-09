@@ -28,9 +28,12 @@ struct mcsender* mc_sender_init(char *interface, char* multicastip, unsigned sho
     }
 
     // Disable loopback so we don't receive our own datagrams.
+    // Set TTL to 1. This is important, if too high means we'll leak packets to ISP's backbone or the Internet.
     {
-        char loopch = 0;
-        setsockopt(sc->sd, IPPROTO_IP, IP_MULTICAST_LOOP, (char *)&loopch, sizeof(loopch));
+        unsigned char loopch = 0;
+        setsockopt(sc->sd, IPPROTO_IP, IP_MULTICAST_LOOP, &loopch, sizeof(loopch));
+        unsigned char ttl = LIBMULTICAST_TTL_DEFAULT;
+        setsockopt(sc->sd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
     }
 
     if (interface) {

@@ -14,26 +14,25 @@
 #define MSG_LIBMULTICAST_CLEANUP "e"
 
 struct cb_args {
-    void (*fptr)(char*, int);
-    char *data;
-    int data_len;
+    void (*fptr)(struct mcpacket*);
+    struct mcpacket *incoming_packet;
 };
 
 static void* create_cb_thread(void *args) {
     struct cb_args *cb_args = (struct cb_args*)args;
-    if (!args) {
+    if (!cb_args || !cb_args->incoming_packet) {
         perror("Args NULL\n");
         return NULL;
     }
-    if (!cb_args->fptr || !cb_args->data || cb_args->data_len <= 0) {
+    if (!cb_args->fptr || !cb_args->incoming_packet->data || cb_args->incoming_packet->len <= 0) {
         perror("One arg is NULL\n");
-        if (cb_args->data) free(cb_args->data);
-        free(args);
-        return NULL;
+        goto cleanup;
     }
-    cb_args->fptr(cb_args->data, cb_args->data_len);
-    free(cb_args->data);
-    free(args);
+    cb_args->fptr(cb_args->incoming_packet);
+cleanup:
+    if (cb_args->incoming_packet->data) free(cb_args->incoming_packet->data);
+    if (cb_args->incoming_packet) free(cb_args->incoming_packet);
+    if (args) free(args);
     return NULL;
 }
 
@@ -66,7 +65,7 @@ static int is_select_cancelled(struct mcreceiver* rc) {
 }
 
 // Loop thread for listener. 
-// This function will return. This function will create an extra thread.
+// This function will return when mc_receiver_uinit(rc) is called. This function will create an extra thread.
 static void _recv(struct mcreceiver* rc) {
     while(is_running(rc)) {
         fd_set read_set;
@@ -78,17 +77,21 @@ static void _recv(struct mcreceiver* rc) {
         for (int i = 0; i < FD_SETSIZE; i++) {
             if (!FD_ISSET(i, &read_set)) continue; // fd is not in tracked set.
             if (i == rc->sd) { // Data available on listening socket.
-                rc->data = calloc(UDP_PACKET_SIZE_MAX, 1);
+                char *data = calloc(UDP_PACKET_SIZE_MAX, 1);
 
                 // Unlike TCP streams, UDP only sends 1 packet at a time, so we read once.
-                int bytes_read = read(rc->sd, rc->data, UDP_PACKET_SIZE_MAX);
-                rc->data_len = bytes_read;
+                //int bytes_read = read(rc->sd, rc->data, UDP_PACKET_SIZE_MAX);
+                struct sockaddr_in sockinfo;
+                socklen_t addrlen = sizeof(sockinfo);
+                int bytes_read = recvfrom(rc->sd, data, UDP_PACKET_SIZE_MAX, 0, (struct sockaddr*)&sockinfo, &addrlen);                
 
                 // Create arguments for callback function.
                 struct cb_args *args = malloc(sizeof(*args)); // create_cb_thread() will free this.
                 args->fptr = rc->fptr;
-                args->data = rc->data;
-                args->data_len = rc->data_len;
+                args->incoming_packet = malloc(sizeof(*(args->incoming_packet)));
+                args->incoming_packet->data = data;
+                args->incoming_packet->len = bytes_read;
+                args->incoming_packet->src_addr = inet_ntoa(sockinfo.sin_addr);
 
                 // Create another thread for callback func.
                 pthread_t wildthread;
@@ -114,7 +117,8 @@ static void* create_recv_thread(void* args) {
     return NULL;
 }
 
-struct mcreceiver* mc_receiver_init(char *interface, char* multicastip, unsigned short port, void (*callback)(char*, int)) {
+struct mcreceiver* mc_receiver_init(char *interface, char* multicastip, unsigned short port, void (*callback)(struct mcpacket*)) {
+    printf("Open socket\n");
     struct mcreceiver* rc = malloc(sizeof(*rc));
     rc->sd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0);
     if (rc->sd < 0) {
@@ -127,6 +131,7 @@ struct mcreceiver* mc_receiver_init(char *interface, char* multicastip, unsigned
     }
     pthread_mutex_init(&rc->mutex, NULL);
 
+    printf("Open socket\n");
     // Enable SO_REUSEADDR to allow multiple instances of this application to receive copies of the multicast datagrams.
     {
         int reuse = 1;
@@ -164,6 +169,7 @@ struct mcreceiver* mc_receiver_init(char *interface, char* multicastip, unsigned
         rc->group.imr_interface.s_addr = htonl(INADDR_ANY);
     }
 
+    printf("Joining group init [%s:%d]\n", multicastip, port);
     // Join the multicast group on the designated network interface.
     rc->group.imr_multiaddr.s_addr = inet_addr(multicastip);
     if (setsockopt(rc->sd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&rc->group, sizeof(rc->group)) < 0) {
@@ -171,11 +177,15 @@ struct mcreceiver* mc_receiver_init(char *interface, char* multicastip, unsigned
         goto error;
     }
 
+    printf("Muticast trying to init receiver thread [%s:%d]\n", multicastip, port);
+
     rc->fptr = callback;
     rc->running = 1;
     pthread_t th;
     pthread_create(&th, NULL, create_recv_thread, (void*)rc);
     pthread_detach(th);
+
+    printf("Muticast listening on [%s:%d]\n", multicastip, port);
 
     return rc;
 

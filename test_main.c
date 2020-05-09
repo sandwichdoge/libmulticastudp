@@ -1,10 +1,11 @@
 #include <stdio.h>
+#include "libmulticast.h"
 #include <unistd.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
-#include "libmulticast.h"
 
+#define INTERFACE NULL//"wlo1"
 #define MCAST_IP "226.1.1.1"
 #define PORT 4321
 #define DATA "Hello THERE"
@@ -21,15 +22,15 @@ void sig_handler(int signo)
     }
 }
 
-void cb(char *data, int len) {
-    printf("[%s]-[Len:%d]\n", data, len);
+void cb(struct mcpacket* packet) {
+    printf("[%s]-[Len:%d]-[From:%s]\n", packet->data, packet->len, packet->src_addr);
 }
 
 int main() {
     signal(SIGINT, sig_handler);
     sc = mc_sender_init(NULL, MCAST_IP, PORT);
     rc = mc_receiver_init(NULL, MCAST_IP, PORT, &cb);
-    printf("Registered to %s:%d. Handler:[%p]\n", MCAST_IP, PORT, (void*)rc);
+    printf("Registered to %s:%d on interface [%p]. Handler:[%p]\n", MCAST_IP, PORT, INTERFACE, (void*)rc);
     printf("Listening..\n");
     while (1) {
         sleep(2);
